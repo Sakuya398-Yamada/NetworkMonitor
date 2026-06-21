@@ -25,8 +25,6 @@ $gateway = "192.168.130.254"
 $external1 = "8.8.8.8"
 $external2 = "1.1.1.1"
 
-# Resolve NIC name dynamically to avoid encoding issues
-$nic = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' -and $_.InterfaceDescription -like 'Realtek*' } | Select-Object -First 1
 # 実際に通信に使われてる（デフォルトゲートウェイを持つ）アダプタを特定
 $defaultRoute = Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue |
 	Sort-Object RouteMetric, ifMetric |
