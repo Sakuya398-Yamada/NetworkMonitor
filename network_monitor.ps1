@@ -27,6 +27,44 @@ $external2 = "1.1.1.1"
 
 # Resolve NIC name dynamically to avoid encoding issues
 $nic = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' -and $_.InterfaceDescription -like 'Realtek*' } | Select-Object -First 1
+# 実際に通信に使われてる（デフォルトゲートウェイを持つ）アダプタを特定
+$defaultRoute = Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue |
+	Sort-Object RouteMetric, ifMetric |
+	Select-Object -First 1
+$nic = if ($defaultRoute) {
+	Get-NetAdapter -InterfaceIndex $defaultRoute.ifIndex -ErrorAction SilentlyContinue
+}
+
+# フォールバック: Up な物理アダプタの先頭
+if (-not $nic) {
+	$nic = Get-NetAdapter -Physical | Where-Object Status -eq 'Up' | Select-Object -First 1
+}
+
+# それでも見つからなければ落とす（null のまま走らせない）
+if (-not $nic) {
+	Write-Host "稼働中のネットワークアダプタが見つからないよ。Get-NetAdapter で確認して。" -ForegroundColor Red
+	Get-NetAdapter | Format-Table Name, InterfaceDescription, Status -AutoSize
+	exit 1
+}
+$nicName = $nic.Name# 実際に通信に使われてる（デフォルトゲートウェイを持つ）アダプタを特定
+$defaultRoute = Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue |
+	Sort-Object RouteMetric, ifMetric |
+	Select-Object -First 1
+$nic = if ($defaultRoute) {
+	Get-NetAdapter -InterfaceIndex $defaultRoute.ifIndex -ErrorAction SilentlyContinue
+}
+
+# フォールバック: Up な物理アダプタの先頭
+if (-not $nic) {
+	$nic = Get-NetAdapter -Physical | Where-Object Status -eq 'Up' | Select-Object -First 1
+}
+
+# それでも見つからなければ落とす（null のまま走らせない）
+if (-not $nic) {
+	Write-Host "稼働中のネットワークアダプタが見つからないよ。Get-NetAdapter で確認して。" -ForegroundColor Red
+	Get-NetAdapter | Format-Table Name, InterfaceDescription, Status -AutoSize
+	exit 1
+}
 $nicName = $nic.Name
 
 # Helper: single ping using .NET Ping class, returns latency in ms or -1 for timeout
